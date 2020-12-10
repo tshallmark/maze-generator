@@ -1,5 +1,14 @@
 #include "maze.h"
 
+/**
+ * @brief Maze class cconstructor
+ * 
+ * @param w pointer to an sfml window
+ * @param cols width of the maze in squares
+ * @param rows height of the maze in squares
+ * 
+ * @return 
+ */
 Maze::Maze(sf::RenderWindow* w,int cols, int rows)
 {
     srand (time(NULL));
@@ -18,6 +27,7 @@ Maze::Maze(sf::RenderWindow* w,int cols, int rows)
     squareSize.x = window->getSize().x / (float)colSize;
     squareSize.y = window->getSize().y / (float)rowSize;
 
+    //allocate memory for main array
     grid = new char*[rowSize];
     for(int row = 0; row < rowSize; row++)
     {
@@ -26,7 +36,6 @@ Maze::Maze(sf::RenderWindow* w,int cols, int rows)
         {
             initializeSquare(row,col);
             //push each square to render queue
-            //order reversed for x/y coordinates
             renderQ.push(sf::Vector2i(col,row));
         }
     }
@@ -39,6 +48,9 @@ Maze::Maze(sf::RenderWindow* w,int cols, int rows)
     grid[rowSize-1][end] = 'e';
 }
 
+/**
+ * @brief Maze class destructor
+ */
 Maze::~Maze()
 {
     //destroy each subArray
@@ -52,6 +64,12 @@ Maze::~Maze()
     grid = nullptr;
 }
 
+/**
+ * @brief sets the number of updates required before rendering during
+ * & solving
+ * 
+ * @param s new renderSpeed
+ */
 void Maze::setRenderSpeed(int s)
 {
     //validate speed
@@ -59,6 +77,12 @@ void Maze::setRenderSpeed(int s)
         renderSpeed = s;
 }
 
+/**
+ * @brief initializes value of squares in grid[][] before generation
+ * 
+ * @param row row of the target
+ * @param col column of the targer
+ */
 void Maze::initializeSquare(int row, int col)
 {
     if((row > 0 && row < rowSize - 1) //if not on perimeter
@@ -72,6 +96,10 @@ void Maze::initializeSquare(int row, int col)
     }
 }
 
+/**
+ * @brief finds path through maze by depth-first search
+ * 
+ */
 void Maze::findPath()
 {
     int maxDepth = 0;
@@ -121,7 +149,14 @@ void Maze::findPath()
     }
 }
 
-
+/**
+ * @brief returns true if given coordinates are a valid path
+ * 
+ * @param row target row
+ * @param col taret column
+ * 
+ * @return true if square is part of a potential path
+ */
 bool Maze::validMove(int row, int col)
 {
     //return true if
@@ -131,6 +166,14 @@ bool Maze::validMove(int row, int col)
         && grid[row][col] != 'f');// and not on failed path
 }
 
+/**
+ * @brief checks if a square is out of bounds on grid[]][]
+ * 
+ * @param row target row
+ * @param col target column
+ * 
+ * @return true if out of bounds
+ */
 bool Maze::isOOB(int row, int col)
 {
     if(col < 0 || col >= colSize || row < 0 || row >= rowSize)
@@ -138,6 +181,15 @@ bool Maze::isOOB(int row, int col)
     return false;
 }
 
+/**
+ * @brief locates the square between two adjacent coordinates
+ * used to open walls during generation
+ * 
+ * @param a vector of the current square
+ * @param b vector of the target square
+ * 
+ * @return vector of seperating wall
+ */
 sf::Vector2i Maze::betweenSquare(sf::Vector2i a,sf::Vector2i b)
 {
     //set between coordinates to half the difference of a & b coordinates
@@ -150,12 +202,21 @@ sf::Vector2i Maze::betweenSquare(sf::Vector2i a,sf::Vector2i b)
     return between;
 }
 
+/**
+ * @brief fully clears and refreshes the window
+ * 
+ */
 void Maze::refresh()
 {
+    w->clear(sf::Color::Black);
     updateAll();
     draw();
 }
 
+/**
+ * @brief adds all squares to the render queue
+ * 
+ */
 void Maze::updateAll()
 {
     for(size_t row = 0; row < rowSize; row++)
@@ -167,8 +228,34 @@ void Maze::updateAll()
     }
 }
 
+/**
+ * @brief Draws the current contents of the renderqueue if queue is larger than threshold
+ * except in the case of a window resize, in which the window is fully redrawn or window close
+ * 
+ * @param threshold minimum updated squares for normal rendering
+ */
 void Maze::draw(int threshold)
 {
+    sf::Event event;
+    while(window->pollEvent(event))
+    {
+        if(event.type == sf::Event::Closed)
+        {
+            window->close();
+            return;
+        }
+
+        if (event.type == sf::Event::Resized)
+        {
+            //recalculate squaresize
+            squareSize.x = event.size.width / (float)colSize;
+            squareSize.y = event.size.height / (float)rowSize;
+            updateAll();
+            threshold = 0;
+            window->clear(sf::Color::Black);
+        }
+    }
+
     //only render if queue is larger than threshold 
     if(renderQ.size() > threshold)
     {
@@ -179,8 +266,8 @@ void Maze::draw(int threshold)
             sf::Vector2i temp = renderQ.front();
             renderQ.pop();
             //find window coordinates of square
-            int posX = 0 + (temp.x * squareSize.x);
-            int posY = 0 + (temp.y * squareSize.y);
+            float posX = 0 + ((float)temp.x * squareSize.x);
+            float posY = 0 + ((float)temp.y * squareSize.y);
             
             drawSquare(grid[temp.y][temp.x], posX, posY);
         }
@@ -188,7 +275,16 @@ void Maze::draw(int threshold)
     }
 }
 
-void Maze::drawSquare(char c, int posX, int posY)
+/**
+ * @brief draws a single square into window
+ * 
+ * @param c contents of the square in grid[][]
+ * @param posX x position of the square in the window
+ * @param posY y position of the square in the window
+ * 
+ * @return 
+ */
+void Maze::drawSquare(char c, float posX, float posY)
 {
     //create and place shape
     sf::RectangleShape square(squareSize);
@@ -196,19 +292,19 @@ void Maze::drawSquare(char c, int posX, int posY)
 
     if(c == '#' || c == '-') //color walls black
         square.setFillColor(sf::Color::Black);
-    else if (c == 'o')
+    else if (c == 'o') //open squares white
     {
         square.setFillColor(sf::Color::White);
-    }else if (c == 'f')
+    }else if (c == 'f') //failed paths
     {
         square.setFillColor(sf::Color::Cyan);
-    }else if (c == 'p')
+    }else if (c == 'p') //active paths
     {
         square.setFillColor(sf::Color::Blue);
-    }else if (c == 's')
+    }else if (c == 's') //start
     {
         square.setFillColor(sf::Color::Green);
-    }else if (c =='e')
+    }else if (c =='e') //end
     {
         square.setFillColor(sf::Color::Red);
     }
@@ -216,6 +312,12 @@ void Maze::drawSquare(char c, int posX, int posY)
     window ->draw(square);
 }
 
+/**
+ * @brief prints the raw char grid into ostream, useful for debuging
+ * 
+ * @param ostr destination stream
+ * 
+ */
 void Maze::printGrid(std::ostream &ostr)
 {
     std::cout << ' ';
@@ -237,30 +339,36 @@ void Maze::printGrid(std::ostream &ostr)
     ostr << "\n";
 }
 
-
-
+/**
+ * @brief generates maze by depth full depth first search of grid[][]
+ * 
+ */
 void DepthMaze::generate()
 {
-    int maxDepth = 0;
+    int maxDepth = 0; //maximum search depth 
+
+    //find random starting location
     int row = 1 + 2 * (rand() % (rowSize / 2));
     int col = 1 + 2 * (rand() % (colSize / 2));
 
-    std::stack<sf::Vector2i> path;
+    std::stack<sf::Vector2i> path; //stack of squares in active path
 
-    sf::Vector2i curr(col, row);
+    sf::Vector2i curr(col, row); //current square
     grid[row][col] = 'o';
-    renderQ.push(curr);
-    path.push(curr);
+    renderQ.push(curr); //add current square to render queue
+    path.push(curr); //add current square to path
 
-    while(!path.empty())
+    //continue search until path is empty
+    while(!path.empty()) 
     {
+        //update maxDepth
         if(path.size() > maxDepth)
             maxDepth = path.size();
-            
+        
+        //get and pop new current square from stack
         curr = path.top();
         path.pop();
-        //array of coordinates of adjacent squares
-        sf::Vector2i neighbors[4];
+        sf::Vector2i neighbors[4]; //array of coordinates of adjacent squares
         neighbors[0] = sf::Vector2i(curr.x, curr.y - 2); //add north
         neighbors[1] = sf::Vector2i(curr.x, curr.y + 2); //add south
         neighbors[2] = sf::Vector2i(curr.x + 2, curr.y); //add east
@@ -299,34 +407,53 @@ void DepthMaze::generate()
     draw(); //empty render queue
 }
 
+/**
+ * @brief generate maze by a randomized prim's algorithm
+ */
 void PrimMaze::generate()
 {
-    std::vector<sf::Vector2i> walls;
+    std::vector<sf::Vector2i> walls; //list of walls 
 
+    //select random starting square
     int row = 1 + 2 * (rand() % (rowSize / 2));
     int col = 1 + 2 * (rand() % (colSize / 2));
-    grid[row][col] = 'o';
-    renderQ.push(sf::Vector2i(col,row));
+    grid[row][col] = 'o'; //mark as open
+    renderQ.push(sf::Vector2i(col,row)); 
     draw(renderSpeed);
+    //add walls around current square to list
     addWalls(row, col, walls);
 
     while(!walls.empty())
     {
         draw(renderSpeed);
+        //select random wall from list
         int i = rand() % walls.size();
+        //remove wall from list
         sf::Vector2i temp = walls[i];
         walls[i] = walls[walls.size()-1];
         walls[walls.size()-1] = temp;
         walls.pop_back();
+        //add cells adjacent to current wall
         addCell(temp.y, temp.x, walls);
     }
 }
 
+/**
+ * @brief //adds unvisited cell adjacent to wall if exists
+ * 
+ * @param row row of target wall
+ * @param col col of target wall
+ * @param w reference to wall list 
+ * 
+ * @return 
+ */
 void PrimMaze::addCell(int row, int col, std::vector<sf::Vector2i> &w)
 {
 
-    if(row % 2 == 0)
+    if(row % 2 == 0) //if wall seperates squares vertically
     {
+        //if only one adjacent square is unvisited, mark it as open and
+        //add adjacent walls to list
         if( (grid[row+1][col] != '-') && (grid[row-1][col] == '-') )
         {
             grid[row][col] = 'o';
@@ -338,8 +465,10 @@ void PrimMaze::addCell(int row, int col, std::vector<sf::Vector2i> &w)
              renderQ.push(sf::Vector2i(col,row));
             addWalls(row+1, col, w);
         }
-    }else
+    }else //if wall seperates squares horizontally
     {
+        //if only one adjacent square is unvisited, mark it as open and
+        //add adjacent walls to list
         if( (grid[row][col+1] != '-') && (grid[row][col-1] == '-') )
         {
             grid[row][col] = 'o';
@@ -354,6 +483,13 @@ void PrimMaze::addCell(int row, int col, std::vector<sf::Vector2i> &w)
     }
 }
 
+/**
+ * @brief adds walls adjacent to a cell into list
+ * 
+ * @param row row of target cell
+ * @param col column of target cell
+ * @param w @param w reference to wall list 
+ */
 void PrimMaze::addWalls(int row, int col, std::vector<sf::Vector2i> &w)
 {
     grid[row][col] = 'o';
@@ -375,6 +511,3 @@ void PrimMaze::addWalls(int row, int col, std::vector<sf::Vector2i> &w)
         w.push_back(sf::Vector2i(col-1, row));
     }
 }
-
-
-

@@ -1,3 +1,10 @@
+/**
+ * @file 
+ * @author Taylor Hallmark
+ * @brief  
+ * @date 
+ */
+
 #include "maze.h"
 #include "iostream"
 
@@ -5,7 +12,7 @@ int main()
 {
     sf::RenderWindow window(sf::VideoMode(1001,1001), "Maze");
 
-    PrimMaze m(&window, 1001, 1001);
+    DepthMaze m(&window, 100, 100);
     m.setRenderSpeed(1000);
 
     m.generate();
@@ -14,13 +21,7 @@ int main()
 
     while(window.isOpen())
     {
-        
-        sf::Event event;
-        while(window.pollEvent(event))
-        {
-            if(event.type == sf::Event::Closed)
-                window.close();
-        }
+        m.draw();
     }
 
     return 0;
