@@ -34,15 +34,6 @@ Maze::Maze(sf::RenderWindow* w,int cols, int rows)
     squareSize.x = window->getSize().x / (float)colSize;
     squareSize.y = window->getSize().y / (float)rowSize;
 
-    std::cout << window->getSize().x << ' ';
-    std::cout << window->getSize().y << '\n';
-
-    std::cout << colSize << ' ';
-    std::cout << rowSize << '\n';
-    
-    std::cout << squareSize.x << ' ';
-    std::cout << squareSize.y << '\n';
-
     //allocate memory for main array
     grid = new char*[rowSize];
     for(int row = 0; row < rowSize; row++)
@@ -62,6 +53,8 @@ Maze::Maze(sf::RenderWindow* w,int cols, int rows)
 
     grid[0][start] = 's';
     grid[rowSize-1][end] = 'e';
+
+    window->clear(sf::Color::Black);
 }
 
 /**
@@ -227,8 +220,7 @@ void Maze::breadthPath()
 
 void Maze::drawPath(pathNode* nodePtr)
 {
-    printGrid(std::cout);
-    nodePtr = nodePtr->parent;
+    nodePtr = nodePtr->parent; //skip starting square
     while(nodePtr != nullptr)
     {
         sf::Vector2i temp = nodePtr->positon;

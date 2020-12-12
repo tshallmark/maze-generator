@@ -10,18 +10,15 @@
 
 int main()
 {
-    sf::RenderWindow window(sf::VideoMode(800,800), "Maze");
+    sf::RenderWindow window(sf::VideoMode(1001,1001), "Maze");
 
-    DepthMaze m(&window, 100, 100);
-    m.setRenderSpeed(50);
+    DepthMaze m(&window, 1001, 1001);
+    m.setRenderSpeed(200);
     m.generate();
+    m.breadthPath();
 
     while(window.isOpen())
     {
-        m.depthPath();
-        m.reset();
-        m.breadthPath();
-        m.reset();
         m.draw();
     }
 
