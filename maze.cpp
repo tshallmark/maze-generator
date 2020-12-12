@@ -1,3 +1,10 @@
+/**
+ * @file maze.h
+ * @author Taylor Hallmark
+ * @brief definition file for maze class
+ * @date 12/10
+ */
+
 #include "maze.h"
 
 /**
@@ -26,6 +33,15 @@ Maze::Maze(sf::RenderWindow* w,int cols, int rows)
     //calculate dimensions of each cell for rendering
     squareSize.x = window->getSize().x / (float)colSize;
     squareSize.y = window->getSize().y / (float)rowSize;
+
+    std::cout << window->getSize().x << ' ';
+    std::cout << window->getSize().y << '\n';
+
+    std::cout << colSize << ' ';
+    std::cout << rowSize << '\n';
+    
+    std::cout << squareSize.x << ' ';
+    std::cout << squareSize.y << '\n';
 
     //allocate memory for main array
     grid = new char*[rowSize];
@@ -100,11 +116,11 @@ void Maze::initializeSquare(int row, int col)
  * @brief finds path through maze by depth-first search
  * 
  */
-void Maze::findPath()
+void Maze::depthPath()
 {
     int maxDepth = 0;
     std::stack<sf::Vector2i> path;
-    sf::Vector2i curr(start, 0);
+    sf::Vector2i curr(start, 1);
     path.push(curr);
 
     while(!path.empty())
@@ -119,32 +135,106 @@ void Maze::findPath()
         path.pop();
 
         if(grid[curr.y][curr.x] == 'e')
-            break;
+            return;
 
         grid[curr.y][curr.x] = 'p';
+        sf::Vector2i north(curr.x, curr.y - 1);
+        sf::Vector2i south(curr.x, curr.y + 1);
+        sf::Vector2i east(curr.x + 1, curr.y);
+        sf::Vector2i west(curr.x - 1, curr.y);
 
-        if(validMove(curr.y-1,curr.x) ) //check north
+        if(validMove(north) ) //check north
         {
             path.push(curr);
-            path.push(sf::Vector2i(curr.x, curr.y-1));
+            path.push(north);
             
-        }else if( validMove(curr.y+1,curr.x) ) //check south
+        }else if( validMove(south) ) //check south
         {
             path.push(curr);
-            path.push(sf::Vector2i(curr.x, curr.y+1));
-        }else if( validMove(curr.y,curr.x+1) ) //check east
+            path.push(south);
+        }else if( validMove(east) ) //check east
         {
             path.push(curr);
-            path.push(sf::Vector2i(curr.x+1, curr.y));
-        }else if( validMove(curr.y,curr.x-1) ) //check west
+            path.push(east);
+        }else if( validMove(west) ) //check west
         {
             path.push(curr);
-            path.push(sf::Vector2i(curr.x-1,curr.y));
+            path.push(west);
         }else
         {
             grid[curr.y][curr.x] = 'f';
         }
         renderQ.push(curr);
+        draw(renderSpeed);
+    }
+}
+
+void Maze::breadthPath()
+{
+    std::queue<pathNode*> toVisit;
+    std::list<pathNode> graph;
+
+    sf::Vector2i temp(start, 1);
+    graph.push_back(pathNode(temp, nullptr));
+    toVisit.push(&graph.back());
+
+    while(!toVisit.empty())
+    {
+        pathNode* nodePtr = toVisit.front();
+        toVisit.pop();
+        sf::Vector2i curr = nodePtr->positon;
+
+
+        if(grid[curr.y][curr.x] == 'e')
+        {
+            drawPath(nodePtr);
+            break;
+        }else
+        {
+            grid[curr.y][curr.x] = 'f';
+            renderQ.push(curr);
+            draw(renderSpeed);
+        }
+        
+
+        sf::Vector2i north(curr.x, curr.y - 1);
+        sf::Vector2i south(curr.x, curr.y + 1);
+        sf::Vector2i east(curr.x + 1, curr.y);
+        sf::Vector2i west(curr.x - 1, curr.y);
+
+        if(validMove(north) ) //check north
+        {
+            graph.push_back(pathNode(north, nodePtr));
+            toVisit.push(&graph.back());
+        }
+        if( validMove(south) ) //check south
+        {
+            graph.push_back(pathNode(south, nodePtr));
+            toVisit.push(&graph.back());
+        }
+        if( validMove(east) ) //check east
+        {
+            graph.push_back(pathNode(east, nodePtr));
+            toVisit.push(&graph.back());
+        }
+        if( validMove(west) ) //check west
+        {
+            graph.push_back(pathNode(west, nodePtr));
+            toVisit.push(&graph.back());
+        }
+    }
+}
+
+void Maze::drawPath(pathNode* nodePtr)
+{
+    printGrid(std::cout);
+    nodePtr = nodePtr->parent;
+    while(nodePtr != nullptr)
+    {
+        sf::Vector2i temp = nodePtr->positon;
+        grid[temp.y][temp.x] = 'p';
+        renderQ.push(temp);
+        nodePtr = nodePtr->parent;
         draw(renderSpeed);
     }
 }
@@ -157,13 +247,16 @@ void Maze::findPath()
  * 
  * @return true if square is part of a potential path
  */
-bool Maze::validMove(int row, int col)
+bool Maze::validMove(sf::Vector2i loc)
 {
+    int row = loc.y;
+    int col = loc.x;
     //return true if
     return ( !isOOB(row, col) //not out of bounds
         && grid[row][col] != '#' // and not a wall 
         && grid[row][col] != 'p' // and not on current path
-        && grid[row][col] != 'f');// and not on failed path
+        && grid[row][col] != 'f' // and not on failed path
+        && grid[row][col] != 's'); 
 }
 
 /**
@@ -208,9 +301,29 @@ sf::Vector2i Maze::betweenSquare(sf::Vector2i a,sf::Vector2i b)
  */
 void Maze::refresh()
 {
-    w->clear(sf::Color::Black);
+    window->clear(sf::Color::Black);
     updateAll();
     draw();
+}
+
+
+/**
+ * @brief removes paths from maze
+ * 
+ */
+void Maze::reset()
+{
+    for(size_t row = 0; row < rowSize; row++)
+    {
+        for (size_t col = 0; col < colSize; col++)
+        {
+            if(grid[row][col] == 'p' || grid[row][col] == 'f')
+            {
+                grid[row][col] = 'o';
+                renderQ.push(sf::Vector2i(col, row));
+            }
+        }
+    }
 }
 
 /**
@@ -242,7 +355,7 @@ void Maze::draw(int threshold)
         if(event.type == sf::Event::Closed)
         {
             window->close();
-            return;
+            exit(0);
         }
 
         if (event.type == sf::Event::Resized)
@@ -294,8 +407,8 @@ void Maze::drawSquare(char c, float posX, float posY)
         square.setFillColor(sf::Color::Black);
     else if (c == 'o') //open squares white
     {
-        square.setFillColor(sf::Color::White);
-    }else if (c == 'f') //failed paths
+        square.setFillColor(grey);
+    }else if (c == 'f') //failed paths / potenial paths
     {
         square.setFillColor(sf::Color::Cyan);
     }else if (c == 'p') //active paths
@@ -320,19 +433,19 @@ void Maze::drawSquare(char c, float posX, float posY)
  */
 void Maze::printGrid(std::ostream &ostr)
 {
-    std::cout << ' ';
+    std::cout << "  `";
     for (size_t i = 0; i < colSize ; i++)
     {
-        std::cout << i;
+        std::cout << i << ' ';
     }
     std::cout << '\n';
     
     for (size_t row = 0; row < rowSize; row++)
     {
-        std::cout << row;
+        std::cout << row << ' ';
         for (size_t col = 0; col < colSize; col++)
         {
-            ostr << grid[row][col];
+            ostr << grid[row][col] << ' ';
         }
         ostr << "\n";
     }
@@ -510,4 +623,61 @@ void PrimMaze::addWalls(int row, int col, std::vector<sf::Vector2i> &w)
     {
         w.push_back(sf::Vector2i(col-1, row));
     }
+}
+
+void TestMaze::generate()
+{
+    start = 5;
+    char test[7][7] = {
+        {'#','#','#','#','#','s','#'},
+        {'#','o','o','o','o','o','#'},
+        {'#','o','#','o','#','#','#'},
+        {'#','o','#','o','o','o','#'},
+        {'#','o','#','#','#','#','#'},
+        {'#','o','o','o','o','o','#'},
+        {'#','e','#','#','#','#','#'}
+    };
+
+    for (size_t row = 0; row < 7; row++)
+    {
+        for (size_t col = 0; col < 7; col++)
+        {
+            grid[row][col] = test[row][col];
+        }
+        
+    }
+
+};
+
+void TestMaze::printValidityGrid(std::ostream &ostr)
+{
+    std::cout << "  ";
+    for (size_t i = 0; i < colSize ; i++)
+    {
+        std::cout << i << ' ';
+    }
+    std::cout << '\n';
+    
+    for (size_t row = 0; row < rowSize; row++)
+    {
+        std::cout << row << ' ';
+        for (size_t col = 0; col < colSize; col++)
+        {
+            sf::Vector2i temp(col, row);
+            ostr << !validMove(temp) << ' ';
+        }
+        ostr << "\n";
+    }
+    ostr << "\n";
+}
+
+void TestMaze::testPath(std::vector<sf::Vector2i> path)
+{
+    std::list<pathNode> pList;
+    pList.push_back(pathNode(path[0], nullptr));
+    for (size_t i = 1; i < path.size(); i++)
+    {
+        pList.push_back(pathNode( path[i], &pList.back() ));
+    }
+    drawPath(&pList.back());
 }
