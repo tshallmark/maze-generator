@@ -17,34 +17,34 @@ int main()
         DepthMaze dm(&window , 801, 801);
         dm.generate();
         dm.draw();
-        dm.depthPath();
+        dm.depthPath(0);
         dm.draw();
         dm.removePath();
-        dm.breadthPath();
+        dm.breadthPath(0);
         dm.draw();
         
         PrimMaze pm(&window , 801, 801);
         pm.generate();
         pm.draw();
-        pm.depthPath();
+        pm.depthPath(0);
         pm.removePath();
-        pm.breadthPath();
+        pm.breadthPath(0);
         pm.draw();
 
         DivMaze dvm(&window , 801, 801);
         dvm.generate();
         dvm.draw();
-        dvm.depthPath();
+        dvm.depthPath(0);
         dvm.removePath();
-        dvm.breadthPath();
+        dvm.breadthPath(0);
         dvm.draw();
         
         RandDivMaze rdm(&window , 801, 801);
         rdm.generate();
         rdm.draw();
-        rdm.depthPath();
+        rdm.depthPath(0);
         rdm.removePath();
-        rdm.breadthPath();
+        rdm.breadthPath(0);
         rdm.draw();
     }
     

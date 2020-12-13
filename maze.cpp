@@ -155,6 +155,12 @@ void Maze::draw(bool all)
             float posY = 0 + ((float)temp.y * squareSize.y);
             
             drawSquare(c, posX, posY, curr.val);
+            if(!renderWalls)
+            {
+                drawSquare(c, posX-1, posY, curr.val);
+                drawSquare(c, posX, posY-1, curr.val);
+                drawSquare(c, posX-1, posY-1, curr.val);
+            }
         }
         window->display();
         sf::sleep(MS_PER_FRAME - clock.restart());
@@ -211,10 +217,13 @@ sf::Color Maze::getColor(char c, int val)
         return GREY;
     }else if (c == 'f') //failed paths / potenial paths
     {
-        return sf::Color::Cyan;
+        float ratio = (float)val / maxDistance;
+        int step = 255 * ratio;
+        sf::Color fade(step, 0, 255-step);
+        return fade;
     }else if (c == 'p') //active paths
     {
-        return sf::Color::Yellow;
+        return sf::Color::Green;
     }else if (c == 's') //start
     {
         return sf::Color::Green;
@@ -315,6 +324,7 @@ void Maze::refresh()
  */
 void Maze::removePath()
 {
+    maxDistance = 0;
     for(size_t row = 0; row < rowSize; row++)
     {
         for (size_t col = 0; col < colSize; col++)
@@ -384,11 +394,16 @@ void Maze::setRenderSpeed(int s)
         renderSpeed = s;
 }
 
+void Maze::setRenderWalls(bool r)
+{
+    renderWalls = r;
+}
+
 /**
  * @brief finds path through maze by depth-first search
  * 
  */
-void Maze::depthPath()
+void Maze::depthPath(bool solve)
 {
     std::stack<sf::Vector2i> path;
     sf::Vector2i curr(start, 1);
@@ -399,7 +414,7 @@ void Maze::depthPath()
         curr = path.top();
         path.pop();
 
-        if(grid[curr.y][curr.x] == 'e')
+        if(grid[curr.y][curr.x] == 'e' && solve)
             return;
 
         grid[curr.y][curr.x] = 'p';
@@ -429,11 +444,13 @@ void Maze::depthPath()
         {
             grid[curr.y][curr.x] = 'f';
         }
-        renderLoad(curr);
+        renderLoad(curr, path.size());
+        if(path.size() > maxDistance)
+            maxDistance = path.size();
     }
 }
 
-void Maze::breadthPath()
+void Maze::breadthPath(bool solve)
 {
     std::queue<pathNode*> toVisit;
     std::list<pathNode> graph;
@@ -447,18 +464,18 @@ void Maze::breadthPath()
         pathNode* nodePtr = toVisit.front();
         toVisit.pop();
         sf::Vector2i curr = nodePtr->positon;
+        if(nodePtr->distance > maxDistance)
+            maxDistance = nodePtr->distance;
 
-
-        if(grid[curr.y][curr.x] == 'e')
+        if(grid[curr.y][curr.x] == 'e' && solve)
         {
             drawPath(nodePtr);
             break;
         }else
         {
             grid[curr.y][curr.x] = 'f';
-            renderLoad(curr);
+            renderLoad(curr, nodePtr->distance);
         }
-        
 
         sf::Vector2i north(curr.x, curr.y - 1);
         sf::Vector2i south(curr.x, curr.y + 1);

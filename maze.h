@@ -26,9 +26,12 @@ struct pathNode
     {
         positon = pos;
         parent = par;
+        if(par!= nullptr)
+            distance = par->distance + 1;
     }
     sf::Vector2i positon;
     pathNode* parent;
+    int distance=0;
 };
 
 struct renderNode
@@ -53,13 +56,14 @@ public:
     virtual void generate() = 0;
     void refresh();
     void removePath();
-    void draw(bool all = 0);
+    void draw(bool all = false);
     void printGrid(std::ostream &ostr);
 
     void setRenderSpeed(int s = 0);
+    void setRenderWalls(bool r);
 
-    void depthPath();
-    void breadthPath();
+    void depthPath(bool solve = 1);
+    void breadthPath(bool solve = 1);
 
 protected:
     void initializeSquare(int row, int col);
@@ -79,8 +83,9 @@ protected:
     int colSize; //width of maze
     int start; //horizontal position of starting square
     int end; //horizontal position of ending square
-    int renderSpeed = 200; 
+    int renderSpeed = 400; 
     int maxDistance = 0;
+    bool renderWalls = true;
     char** grid; //main maze array
 
     sf::Vector2f squareSize; //dimensions of each square for rendering
