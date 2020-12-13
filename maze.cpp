@@ -19,7 +19,7 @@
 Maze::Maze(sf::RenderWindow* w,int cols, int rows)
 {
     srand (time(NULL));
-
+    
     //verify dimensions are odd
     if(rows % 2 == 0)
         rows--;
@@ -52,7 +52,7 @@ Maze::Maze(sf::RenderWindow* w,int cols, int rows)
     grid[0][start] = 's';
     grid[rowSize-1][end] = 'e';
 
-    window->clear(sf::Color::Black);
+    refresh();
 }
 
 /**
@@ -96,9 +96,12 @@ void Maze::initializeSquare(int row, int col)
  * 
  * @param threshold minimum updated squares for normal rendering
  */
-void Maze::draw(int threshold)
+void Maze::draw(bool all)
 {
     sf::Event event;
+    sf::Clock clock;
+    int speed = renderSpeed;
+
     while(window->pollEvent(event))
     {
         if(event.type == sf::Event::Closed)
@@ -112,29 +115,49 @@ void Maze::draw(int threshold)
             //recalculate squaresize
             squareSize.x = event.size.width / (float)colSize;
             squareSize.y = event.size.height / (float)rowSize;
-            updateAll();
-            threshold = 0;
             window->clear(sf::Color::Black);
         }
     }
 
-    //only render if queue is larger than threshold 
-    if(renderQ.size() > threshold)
+    while(!renderQ.empty())
     {
-        //render squares until queue is empty
-        while(!renderQ.empty())
+        clock.restart();
+        while(window->pollEvent(event))
         {
+            if(event.type == sf::Event::Closed)
+            {
+                window->close();
+                exit(0);
+            }
+
+            if (event.type == sf::Event::Resized)
+            {
+                //recalculate squaresize
+                squareSize.x = event.size.width / (float)colSize;
+                squareSize.y = event.size.height / (float)rowSize;
+                window->clear(sf::Color::Black);
+            }
+        }
+        if(all)
+            speed = renderQ.size();
+        //render threshold squares
+        for(size_t i = 0; i < speed; i++)
+        {
+            if(renderQ.empty())
+                break;
             //get + pop next square
             renderNode curr =renderQ.front();
             sf::Vector2i temp = curr.pos;
+            char c = curr.ch;
             renderQ.pop();
             //find window coordinates of square
             float posX = 0 + ((float)temp.x * squareSize.x);
             float posY = 0 + ((float)temp.y * squareSize.y);
             
-            drawSquare(grid[temp.y][temp.x], posX, posY, curr.val);
+            drawSquare(c, posX, posY, curr.val);
         }
         window->display();
+        sf::sleep(MS_PER_FRAME - clock.restart());
     }
 }
 
@@ -185,13 +208,13 @@ sf::Color Maze::getColor(char c, int val)
         return sf::Color::Black;
     else if (c == 'o') //open squares white
     {
-        return grey;
+        return GREY;
     }else if (c == 'f') //failed paths / potenial paths
     {
         return sf::Color::Cyan;
     }else if (c == 'p') //active paths
     {
-        return sf::Color::Blue;
+        return sf::Color::Yellow;
     }else if (c == 's') //start
     {
         return sf::Color::Green;
@@ -210,13 +233,13 @@ void Maze::drawPath(pathNode* nodePtr)
         grid[temp.y][temp.x] = 'p';
         renderLoad(temp);
         nodePtr = nodePtr->parent;
-        draw(renderSpeed);
     }
 }
 
 void Maze::renderLoad(sf::Vector2i pos, int val)
 {
-    renderQ.push(renderNode(pos, val));
+    char c = grid[pos.y][pos.x];
+    renderQ.push(renderNode(pos, c, val));
 }
 
 /**
@@ -283,7 +306,7 @@ void Maze::refresh()
 {
     window->clear(sf::Color::Black);
     updateAll();
-    draw();
+    draw(1);
 }   
 
 /**
@@ -303,6 +326,7 @@ void Maze::removePath()
             }
         }
     }
+    draw(1);
 }
 
 /**
@@ -366,19 +390,12 @@ void Maze::setRenderSpeed(int s)
  */
 void Maze::depthPath()
 {
-    int maxDepth = 0;
     std::stack<sf::Vector2i> path;
     sf::Vector2i curr(start, 1);
     path.push(curr);
 
     while(!path.empty())
     {
-        if(path.size() > maxDepth)
-            maxDepth = path.size();
-        // std::cout << "current square: [" << curr.x << "][" << curr.y << "]\n" \
-        //           << "stack depth: " << path.size() << '\n'
-        //           << "max Depth: " << maxDepth << "\n\n";
-        
         curr = path.top();
         path.pop();
 
@@ -413,7 +430,6 @@ void Maze::depthPath()
             grid[curr.y][curr.x] = 'f';
         }
         renderLoad(curr);
-        draw(renderSpeed);
     }
 }
 
@@ -441,7 +457,6 @@ void Maze::breadthPath()
         {
             grid[curr.y][curr.x] = 'f';
             renderLoad(curr);
-            draw(renderSpeed);
         }
         
 
@@ -531,14 +546,12 @@ void DepthMaze::generate()
                 //push opened wall and neighbor to render queue
                 renderLoad(wall);
                 renderLoad(neighbors[i]);
-                draw(renderSpeed);
                 //push neighbor to path
                 path.push(neighbors[i]);
                 break;
             }
         }
     }
-    draw(); //empty render queue
 }
 
 /**
@@ -553,13 +566,11 @@ void PrimMaze::generate()
     int col = 1 + 2 * (rand() % (colSize / 2));
     grid[row][col] = 'o'; //mark as open
     renderLoad(sf::Vector2i(col,row)); 
-    draw(renderSpeed);
     //add walls around current square to list
     addWalls(row, col, walls);
 
     while(!walls.empty())
     {
-        draw(renderSpeed);
         //select random wall from list
         int i = rand() % walls.size();
         //remove wall from list
@@ -652,7 +663,6 @@ void DivMaze::generate()
     sf::Vector2i tr(1,1);
     sf::Vector2i bl(colSize - 2, rowSize - 2);
     recDiv(tr,bl);
-    draw(); //empty render queue
 }
 
 void RandDivMaze::generate()
@@ -661,7 +671,6 @@ void RandDivMaze::generate()
     sf::Vector2i tr(1,1);
     sf::Vector2i bl(colSize - 2, rowSize - 2);
     recDiv(tr,bl);
-    draw(); //empty render queue
 }
 
 void DivMaze::emptyMaze()
@@ -675,7 +684,7 @@ void DivMaze::emptyMaze()
             renderLoad(pos);
         }
     }
-    draw();
+    draw(1);
 }
 
 void DivMaze::recDiv(sf::Vector2i tl, sf::Vector2i br)
@@ -705,7 +714,6 @@ void DivMaze::recDiv(sf::Vector2i tl, sf::Vector2i br)
     if(i != 3)
         randHole(sf::Vector2i(tl.x, yDiv), sf::Vector2i(xDiv-1, yDiv));
 
-    draw(renderSpeed);
     recDiv(tl, sf::Vector2i(xDiv-1, yDiv-1));
     recDiv( sf::Vector2i(xDiv+1, tl.y), sf::Vector2i(br.x, yDiv-1));
     recDiv( sf::Vector2i(tl.x, yDiv+1), sf::Vector2i(xDiv-1, br.y));
@@ -741,7 +749,6 @@ void RandDivMaze::recDiv(sf::Vector2i tl, sf::Vector2i br)
     if(i != 3)
         randHole(sf::Vector2i(tl.x, yDiv), sf::Vector2i(xDiv-1, yDiv));
 
-    draw(renderSpeed);
     recDiv(tl, sf::Vector2i(xDiv-1, yDiv-1));
     recDiv( sf::Vector2i(xDiv+1, tl.y), sf::Vector2i(br.x, yDiv-1));
     recDiv( sf::Vector2i(tl.x, yDiv+1), sf::Vector2i(xDiv-1, br.y));
@@ -769,6 +776,7 @@ void DivMaze::randHole(sf::Vector2i a, sf::Vector2i b)
     }else
     {
         grid[a.y][a.x] = 'o';
+        renderLoad(sf::Vector2i(a.x,a.y));
     }
     
 }

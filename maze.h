@@ -17,7 +17,8 @@
 #ifndef MAZE_H
 #define MAZE_H
 
-const sf::Color grey(150,150,150);
+const sf::Color GREY(150,150,150);
+const sf::Time MS_PER_FRAME = sf::milliseconds(16);
 
 struct pathNode
 {
@@ -32,12 +33,14 @@ struct pathNode
 
 struct renderNode
 {
-    renderNode(sf::Vector2i p, int v = -1)
+    renderNode(sf::Vector2i p, char c = 'a', int v = -1)
     {
         pos = p;
         val = v;
+        ch = c;
     }
     sf::Vector2i pos;
+    char ch;
     int val;
 };
 
@@ -50,7 +53,7 @@ public:
     virtual void generate() = 0;
     void refresh();
     void removePath();
-    void draw(int threshold = 0);
+    void draw(bool all = 0);
     void printGrid(std::ostream &ostr);
 
     void setRenderSpeed(int s = 0);
@@ -76,7 +79,8 @@ protected:
     int colSize; //width of maze
     int start; //horizontal position of starting square
     int end; //horizontal position of ending square
-    int renderSpeed = 200; //minimum updates before redrawing 
+    int renderSpeed = 200; 
+    int maxDistance = 0;
     char** grid; //main maze array
 
     sf::Vector2f squareSize; //dimensions of each square for rendering
@@ -117,9 +121,10 @@ public:
         Maze(w,cols,rows){}
 
     virtual void generate();
+    void emptyMaze();
 protected:
     void recDiv(sf::Vector2i tr, sf::Vector2i bl);
-    void emptyMaze();
+    
     void randHole(sf::Vector2i a, sf::Vector2i b);
 };
 
