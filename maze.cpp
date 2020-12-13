@@ -158,6 +158,27 @@ void Maze::drawSquare(char c, float posX, float posY, int val)
     window ->draw(square);
 }
 
+void Maze::drawLine(sf::Vector2i a, sf::Vector2i b, char c)
+{
+    int dx = b.x - a.x;
+    int dy = b.y - a.y;
+
+    sf::Vector2i curr = a;
+
+    while(1)
+    {
+        grid[curr.y][curr.x] = c;
+        renderLoad(sf::Vector2i(curr.x, curr.y));
+        if(curr.x == b.x && curr.y == b.y)
+            break;
+        if(dx)
+            curr.x++;
+        if(dy)
+            curr.y++;
+        
+    }
+}
+
 sf::Color Maze::getColor(char c, int val)
 {
     if(c == '#' || c == '-') //color walls black
@@ -631,7 +652,15 @@ void DivMaze::generate()
     sf::Vector2i tr(1,1);
     sf::Vector2i bl(colSize - 2, rowSize - 2);
     recDiv(tr,bl);
-    printGrid(std::cout);
+    draw(); //empty render queue
+}
+
+void RandDivMaze::generate()
+{
+    emptyMaze();
+    sf::Vector2i tr(1,1);
+    sf::Vector2i bl(colSize - 2, rowSize - 2);
+    recDiv(tr,bl);
     draw(); //empty render queue
 }
 
@@ -641,35 +670,105 @@ void DivMaze::emptyMaze()
     {
         for (size_t col = 1; col < colSize - 1; col++)
         {
-            grid[row][col] = '-';
+            grid[row][col] = 'o';
             sf::Vector2i pos(col,row);
             renderLoad(pos);
-            draw();
         }
     }
+    draw();
 }
 
-void DivMaze::recDiv(sf::Vector2i tr, sf::Vector2i bl)
+void DivMaze::recDiv(sf::Vector2i tl, sf::Vector2i br)
 {
-    int width = bl.x - tr.x + 1;
-    int height = bl.y - tr.y + 1;
-    int xDiv = (rand() % (width / 2) );
-    xDiv = (xDiv * 2) + 1;
 
-    drawLine(sf::Vector2i(xDiv,tr.y),sf::Vector2i(xDiv, bl.y), '#');
+    int width = (br.x - tl.x)+1;
+    int height = (br.y - tl.y)+1;
+
+    if(width==1 || height ==1)
+        return;
+
+    int xDiv = tl.x + 1 + (2 * (width / 4));
+    
+    int yDiv = tl.y + 1 + (2 * (height / 4)); 
+
+    drawLine(sf::Vector2i(xDiv, tl.y), sf::Vector2i(xDiv, br.y), '#');
+    drawLine(sf::Vector2i(tl.x, yDiv), sf::Vector2i(br.x, yDiv), '#');
+
+    int i = rand() % 4;
+
+    if(i != 0)
+        randHole(sf::Vector2i(xDiv, tl.y), sf::Vector2i(xDiv, yDiv-1));
+    if(i != 1)
+        randHole(sf::Vector2i(xDiv+1, yDiv), sf::Vector2i(br.x, yDiv));
+    if(i != 2)
+        randHole(sf::Vector2i(xDiv, yDiv+1), sf::Vector2i(xDiv, br.y));
+    if(i != 3)
+        randHole(sf::Vector2i(tl.x, yDiv), sf::Vector2i(xDiv-1, yDiv));
+
+    draw(renderSpeed);
+    recDiv(tl, sf::Vector2i(xDiv-1, yDiv-1));
+    recDiv( sf::Vector2i(xDiv+1, tl.y), sf::Vector2i(br.x, yDiv-1));
+    recDiv( sf::Vector2i(tl.x, yDiv+1), sf::Vector2i(xDiv-1, br.y));
+    recDiv( sf::Vector2i(xDiv+1, yDiv+1), br);
+
+    return;
 }
 
-void Maze::drawLine(sf::Vector2i a, sf::Vector2i b, char c)
+void RandDivMaze::recDiv(sf::Vector2i tl, sf::Vector2i br)
+{
+
+    int width = (br.x - tl.x)+1;
+    int height = (br.y - tl.y)+1;
+
+    if(width==1 || height ==1)
+        return;
+
+    int xDiv = tl.x + 1 + (2 * (rand() % (width / 2)));
+    
+    int yDiv = tl.y + 1 + (2 * (rand() % (height / 2))); 
+
+    drawLine(sf::Vector2i(xDiv, tl.y), sf::Vector2i(xDiv, br.y), '#');
+    drawLine(sf::Vector2i(tl.x, yDiv), sf::Vector2i(br.x, yDiv), '#');
+
+    int i = rand() % 4;
+
+    if(i != 0)
+        randHole(sf::Vector2i(xDiv, tl.y), sf::Vector2i(xDiv, yDiv-1));
+    if(i != 1)
+        randHole(sf::Vector2i(xDiv+1, yDiv), sf::Vector2i(br.x, yDiv));
+    if(i != 2)
+        randHole(sf::Vector2i(xDiv, yDiv+1), sf::Vector2i(xDiv, br.y));
+    if(i != 3)
+        randHole(sf::Vector2i(tl.x, yDiv), sf::Vector2i(xDiv-1, yDiv));
+
+    draw(renderSpeed);
+    recDiv(tl, sf::Vector2i(xDiv-1, yDiv-1));
+    recDiv( sf::Vector2i(xDiv+1, tl.y), sf::Vector2i(br.x, yDiv-1));
+    recDiv( sf::Vector2i(tl.x, yDiv+1), sf::Vector2i(xDiv-1, br.y));
+    recDiv( sf::Vector2i(xDiv+1, yDiv+1), br);
+
+    return;
+}
+
+void DivMaze::randHole(sf::Vector2i a, sf::Vector2i b)
 {
     int dx = b.x - a.x;
     int dy = b.y - a.y;
-
-    sf::Vector2i curr = a;
-
-    while(curr.x != b.x || curr.y != b.y)
+    
+    if(dx != 0)
     {
-        grid[curr.y][curr.x] = c;
-        curr.x += dx;
-        curr.y += dy;
+        int h = a.x + (2 * (rand() % (dx / 2)));
+        grid[a.y][h] = 'o';
+        renderLoad(sf::Vector2i(h,a.y));
+
+    }else if(dy != 0)
+    {
+        int h = a.y + (2 * (rand() % (dy / 2)));
+        grid[h][a.x] = 'o';
+        renderLoad(sf::Vector2i(a.x,h));
+    }else
+    {
+        grid[a.y][a.x] = 'o';
     }
+    
 }

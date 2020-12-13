@@ -117,9 +117,19 @@ public:
         Maze(w,cols,rows){}
 
     virtual void generate();
-private:
-    void emptyMaze();
+protected:
     void recDiv(sf::Vector2i tr, sf::Vector2i bl);
+    void emptyMaze();
+    void randHole(sf::Vector2i a, sf::Vector2i b);
 };
 
+class RandDivMaze : public DivMaze
+{
+public:
+    RandDivMaze(sf::RenderWindow* w,int cols, int rows):
+            DivMaze(w,cols,rows){}
+    virtual void generate();
+protected:
+    virtual void recDiv(sf::Vector2i tr, sf::Vector2i bl);
+};
 #endif

@@ -11,15 +11,15 @@
 int main()
 {
     sf::RenderWindow window(sf::VideoMode(801,801), "Maze");
-
-    DivMaze m(&window, 10, 10);
+    DivMaze m(&window, 801, 801);
+    m.setRenderSpeed(500);
     m.generate();
-    m.setRenderSpeed(60);
-
+    m.breadthPath();
+    
     while(window.isOpen())
     {
         m.draw();
     }
-
+    
     return 0;
 }   
