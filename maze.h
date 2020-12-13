@@ -30,21 +30,33 @@ struct pathNode
     pathNode* parent;
 };
 
+struct renderNode
+{
+    renderNode(sf::Vector2i p, int v = -1)
+    {
+        pos = p;
+        val = v;
+    }
+    sf::Vector2i pos;
+    int val;
+};
+
 class Maze //abstract class for maze sructures
 {
 public:
     Maze(sf::RenderWindow* w = nullptr,int cols = 0, int rows = 0);
     ~Maze();
 
-    void setRenderSpeed(int s = 0);
-
     virtual void generate() = 0;
-    void depthPath();
-    void breadthPath();
     void refresh();
-    void reset();
+    void removePath();
     void draw(int threshold = 0);
     void printGrid(std::ostream &ostr);
+
+    void setRenderSpeed(int s = 0);
+
+    void depthPath();
+    void breadthPath();
 
 protected:
     void initializeSquare(int row, int col);
@@ -52,7 +64,10 @@ protected:
     bool isOOB(int row, int col);
     sf::Vector2i betweenSquare(sf::Vector2i a, sf::Vector2i b);
 
-    void drawSquare(char c, float posX, float posY);
+    void renderLoad(sf::Vector2i pos, int val = 0);
+    void drawSquare(char c, float posX, float posY, int val);
+    void drawLine(sf::Vector2i a, sf::Vector2i b, char c);
+    sf::Color getColor(char c, int val);
     void updateAll(); 
 
     void drawPath(pathNode* nodePtr);
@@ -66,7 +81,9 @@ protected:
 
     sf::Vector2f squareSize; //dimensions of each square for rendering
     sf::RenderWindow* window; //pointer to sfml window 
-    std::queue<sf::Vector2i> renderQ; //queue of all updated squares to be drawn
+    std::queue<renderNode> renderQ; //queue of all updated squares to be drawn
+    
+    friend class pathFinder;
 };
 
 
@@ -93,16 +110,16 @@ private:
 
 };
 
-class TestMaze : public DepthMaze
+class DivMaze : public Maze //depth first search generated maze
 {
-    public:
-    TestMaze(sf::RenderWindow* w):
-        DepthMaze(w,7,7){}
+public:
+    DivMaze(sf::RenderWindow* w,int cols, int rows):
+        Maze(w,cols,rows){}
 
     virtual void generate();
-    void printValidityGrid(std::ostream &ostr);
-    void testPath(std::vector<sf::Vector2i> path);
 private:
+    void emptyMaze();
+    void recDiv(sf::Vector2i tr, sf::Vector2i bl);
 };
 
 #endif

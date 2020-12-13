@@ -10,12 +10,11 @@
 
 int main()
 {
-    sf::RenderWindow window(sf::VideoMode(1001,1001), "Maze");
+    sf::RenderWindow window(sf::VideoMode(801,801), "Maze");
 
-    DepthMaze m(&window, 1001, 1001);
-    m.setRenderSpeed(200);
+    DivMaze m(&window, 10, 10);
     m.generate();
-    m.breadthPath();
+    m.setRenderSpeed(60);
 
     while(window.isOpen())
     {
@@ -23,4 +22,4 @@ int main()
     }
 
     return 0;
-}
+}   
