@@ -1,2 +1,2 @@
 test: 
-	g++ -std=c++11 test.cpp maze.cpp -o maze3 -lsfml-graphics -lsfml-window -lsfml-system
+	g++ -std=c++11 mazeApp.cpp source/maze.cpp source/mazeClient.cpp -o maze3 -lsfml-graphics -lsfml-window -lsfml-system
